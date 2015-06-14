@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2012 The PPCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 #ifndef BITCOIN_UTIL_H
@@ -36,8 +37,8 @@ typedef int pid_t; /* define for windows compatiblity */
 typedef long long  int64;
 typedef unsigned long long  uint64;
 
-static const int64 COIN = 100000000;
-static const int64 CENT = 1000000;
+static const int64 COIN = 1000000;
+static const int64 CENT = 10000;
 
 #define loop                for (;;)
 #define BEGIN(a)            ((char*)&(a))
@@ -103,8 +104,14 @@ inline void Sleep(int64 n)
 }
 #endif
 
-
-
+#ifndef THROW_WITH_STACKTRACE
+#define THROW_WITH_STACKTRACE(exception)  \
+{                                         \
+    LogStackTrace();                      \
+    throw (exception);                    \
+}
+void LogStackTrace();
+#endif
 
 
 
@@ -443,6 +450,12 @@ inline std::string DateTimeStrFormat(const char* pszFormat, int64 nTime)
     return pszTime;
 }
 
+static const std::string strTimestampFormat = "%Y-%m-%d %H:%M:%S UTC";
+inline std::string DateTimeStrFormat(int64 nTime)
+{
+    return DateTimeStrFormat(strTimestampFormat.c_str(), nTime);
+}
+
 template<typename T>
 void skipspaces(T& it)
 {
@@ -661,9 +674,9 @@ public:
 // Note: It turns out we might have been able to use boost::thread
 // by using TerminateThread(boost::thread.native_handle(), 0);
 #ifdef WIN32
-typedef HANDLE pthread_t;
+typedef HANDLE bitcoin_pthread_t;
 
-inline pthread_t CreateThread(void(*pfn)(void*), void* parg, bool fWantHandle=false)
+inline bitcoin_pthread_t CreateThread(void(*pfn)(void*), void* parg, bool fWantHandle=false)
 {
     DWORD nUnused = 0;
     HANDLE hthread =
@@ -677,12 +690,12 @@ inline pthread_t CreateThread(void(*pfn)(void*), void* parg, bool fWantHandle=fa
     if (hthread == NULL)
     {
         printf("Error: CreateThread() returned %d\n", GetLastError());
-        return (pthread_t)0;
+        return (bitcoin_pthread_t)0;
     }
     if (!fWantHandle)
     {
         CloseHandle(hthread);
-        return (pthread_t)-1;
+        return (bitcoin_pthread_t)-1;
     }
     return hthread;
 }
